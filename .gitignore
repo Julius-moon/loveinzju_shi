@@ -1,0 +1,22 @@
+# Customer inputs and deliveries must stay off GitHub.
+/orders/*
+!/orders/.gitkeep
+/deliveries/*
+!/deliveries/.gitkeep
+.private/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.venv/
+node_modules/
+/dist/
+
