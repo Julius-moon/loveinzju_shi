@@ -165,9 +165,10 @@ def summary(order):
                     else "待客户付款")]
     lines += ["", "定制内容", json.dumps(order["details"], ensure_ascii=False, indent=2),
               "", "素材需求：" + order["materials"], "补充说明：" + (order["extras"] or "无")]
-    if order.get("payerReference"):
-        lines += ["", "客户填写的付款说明：" + order["payerReference"],
-                  "声明时间：" + order["claimedAt"],
+    if order.get("claimedAt"):
+        if order.get("payerReference"):
+            lines += ["", "客户填写的付款说明：" + order["payerReference"]]
+        lines += ["声明时间：" + order["claimedAt"],
                   "注意：这是客户的付款声明，不是微信到账通知。请先核对自己的收款账单。"]
     return "\n".join(lines)
 
@@ -327,7 +328,7 @@ def claim_payment(store, order_id, body, token):
         return public_receipt(order)
     if body.get("paidDeclaration") is not True:
         raise APIError(400, "请确认你已按显示金额付款。")
-    reference = text(body.get("payerReference"), "付款说明", 200)
+    reference = text(body.get("payerReference", ""), "付款说明", 200, required=False)
     order.update(paymentStatus="claimed", payerReference=reference, claimedAt=now(),
                  notificationStatus="pending_retry")
     store.put("orders/" + order_id + ".json", order)

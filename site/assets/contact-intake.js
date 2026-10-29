@@ -29,12 +29,12 @@ async function api(path,data,token){
  try{const response=await fetch(endpoint.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json',...(token?{'X-Order-Token':token}:{})},body:JSON.stringify(data),signal:controller.signal});
  let result;try{result=await response.json()}catch{throw Error('服务未返回确认，请保留内容后重试。')}
  if(!response.ok)throw Error(result.error||'暂时无法提交，请稍后重试。');return result;
- }catch(e){if(e.name==='AbortError')throw Error('暂未收到确认。请勿重复付款，可点击原按钮重试提交。');throw e}finally{clearTimeout(timeout)}
+ }catch(e){if(e.name==='AbortError')throw Error('暂未收到确认。请勿重复付款，可点击原按钮重试提交。');if(e instanceof TypeError)throw Error('暂时无法连接，请保留内容后重试。');throw e}finally{clearTimeout(timeout)}
 }
 function showSuccess(r){
  $('#orderReview').hidden=true;$('#paymentStep').hidden=true;$('#orderSuccess').hidden=false;$('#orderTitle').textContent='让故事，从这里继续。';$('#successNumber').textContent=r.id;
- $('#successText').textContent=r.quoteRequired?'你的需求已保存，需要先确认素材范围与报价，请暂勿付款。':'你的付款说明已提交，当前状态为「待人工核验」，尚未确认到账。';
- if(r.notificationStatus!=='sent')$('#successText').textContent+=' 邮件通知正在重试，需求已保留，请勿重复付款。';remember();
+ $('#successText').textContent=r.quoteRequired?'请暂勿付款，等待报价确认。':'';$('#successText').hidden=!r.quoteRequired;document.querySelector('.order-backup').hidden=true;
+ if(r.notificationStatus!=='sent'){$('#successText').hidden=false;$('#successText').textContent+=(r.quoteRequired?' ':'')+'需求已保存，邮件通知稍后重试。'}remember();
 }
 function showPayment(r){
  if(r.quoteRequired||['claimed','verified'].includes(r.paymentStatus)){showSuccess(r);return}
@@ -46,11 +46,11 @@ $('#briefForm').addEventListener('submit',e=>{
  const next=JSON.stringify(data);if(signature!==next){signature=next;requestId=uuid();receipt=null}payload={...data,requestId};remember();
  const quote=data.materials!=='base'||data.product==='strawberry';
  copyText=['爱在ZJU · 定制单','礼物：'+t.name,'送给：'+data.recipient,'希望收到日期：'+data.desiredDate,'联系邮箱：'+data.email,quote?'需先报价，暂不付款':window.LoveCatalog.label()+'：¥'+window.LoveCatalog.price(type.value),...t.fields.map(([id,label])=>label+'：\n'+data.details[id]),'素材：'+$('#materials').value,'补充：'+(data.extras||'无')].join('\n\n');
- $('#reviewText').textContent=copyText;$('#orderReview').hidden=false;$('#paymentStep').hidden=true;$('#orderSuccess').hidden=true;$('#orderTitle').textContent='再看一眼，你的心意。';$('#confirmOrder').textContent=quote?'确认内容，提交报价咨询 →':'确认定制单，查看付款方式 →';error('');
+ $('#reviewText').textContent=copyText;$('#orderReview').hidden=false;$('#paymentStep').hidden=true;$('#orderSuccess').hidden=true;$('#orderTitle').textContent='再看一眼，你的心意。';$('#confirmOrder').textContent=quote?'确认内容，提交报价咨询 →':'确认定制单，查看付款方式 →';error('');document.querySelector('.order-backup').hidden=false;
  if(receipt)showPayment(receipt);dialog.showModal();
 });
 $('#confirmOrder').addEventListener('click',async()=>{if(busy)return;lock(true);error('');try{receipt=await api('/api/orders',payload);remember();showPayment(receipt)}catch(e){error(e.message)}finally{lock(false)}});
-$('#claimPayment').addEventListener('click',async()=>{if(busy||!receipt)return;error('');if(!$('#paidDeclaration').checked||!$('#payerReference').value.trim()){error('请填写付款说明，并勾选付款声明。');return}lock(true);try{receipt=await api('/api/orders/'+receipt.id+'/payment-claim',{paidDeclaration:true,payerReference:$('#payerReference').value.trim()},receipt.accessToken);showSuccess(receipt)}catch(e){error(e.message)}finally{lock(false)}});
+$('#claimPayment').addEventListener('click',async()=>{if(busy||!receipt)return;error('');lock(true);try{receipt=await api('/api/orders/'+receipt.id+'/payment-claim',{paidDeclaration:true},receipt.accessToken);showSuccess(receipt)}catch(e){error(e.message)}finally{lock(false)}});
 $('#closeOrder').addEventListener('click',()=>dialog.close());
 $('#downloadOrder').addEventListener('click',()=>{const blob=new Blob([copyText+(receipt?'\n\n定制单编号：'+receipt.id:'')],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='爱在ZJU-定制单.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 

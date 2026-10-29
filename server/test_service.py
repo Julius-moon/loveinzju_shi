@@ -65,6 +65,17 @@ class IntakeTest(unittest.TestCase):
         self.assertEqual(result[1]['order']['paymentStatus'], 'verified')
         self.assertEqual(self.call('/api/admin/orders', method='GET', headers=headers)[1]['orders'][0]['id'], r['id'])
 
+    def test_claim_without_payment_description(self):
+        r = self.create()
+        status, result, _ = self.call('/api/orders/'+r['id']+'/payment-claim',
+            {"paidDeclaration": True}, headers={"X-Order-Token": r['accessToken']})
+        self.assertEqual(status, 200)
+        self.assertEqual(result['paymentStatus'], 'claimed')
+        self.assertEqual(result['notificationStatus'], 'sent')
+        self.assertEqual(len(self.sent), 1)
+        self.assertIn('待人工核验', main.summary(self.sent[0]))
+        self.assertNotIn('客户填写的付款说明', main.summary(self.sent[0]))
+
     def test_duplicate_request_and_changed_payload(self):
         data = self.data()
         first = self.call('/api/orders', data)[1]
