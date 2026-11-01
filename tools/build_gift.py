@@ -145,7 +145,7 @@ def build(config_path, output):
     source = re.sub(r'<a\b[^>]*href="(?:index|contact)\.html[^>]*>.*?</a>', '', source, flags=re.S)
     def embed_style(m):
         css = (SITE / m[1].split('?')[0]).read_text(encoding='utf8')
-        css = css.replace("url('Allura-Regular.ttf')", "url('assets/Allura-Regular.ttf')")
+        css = css.replace("url('Allura-Regular.ttf')", "url('assets/Allura-Regular.ttf')").replace("url('LXGWWenKai-Regular.ttf')", "url('assets/LXGWWenKai-Regular.ttf')")
         return '<style>' + css + '</style>'
     source = re.sub(r'<link\b[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*>', embed_style, source)
     embedded_scripts = []
